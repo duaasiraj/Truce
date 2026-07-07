@@ -1,3 +1,3 @@
 from supabase import create_client
-from config.settings import SUPABASE_URL, SUPABASE_KEY
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+from config.settings import settings
+supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
