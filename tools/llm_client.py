@@ -38,6 +38,10 @@ def call_gemma(agent_name: str, purpose: str, prompt: str, project_id: str | Non
 
     try:
         resp = requests.post(FIREWORKS_URL, headers=headers, json=payload, timeout=30)
+
+        print("Status:", resp.status_code)
+        print(resp.text)
+
         resp.raise_for_status()
         data = resp.json()
         content = data["choices"][0]["message"]["content"]
