@@ -1,5 +1,9 @@
-.env
 __pycache__/
 .venv/
 venv/
 test_llm.py
+test_client_multi.py
+test_client_agent.py
+test.py
+config.bat
+node_modules
