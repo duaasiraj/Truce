@@ -1,0 +1,2 @@
+# Keep dependency manifests ASCII/UTF-8 with Unix line endings on all platforms.
+requirements.txt text eol=lf
