@@ -57,6 +57,7 @@ class Project(BaseModel):
         "pricing_ready",
         "negotiating",
         "contract_generated",
+        "no_deal_possible",
         "signed",
         "completed",
         "cancelled"
