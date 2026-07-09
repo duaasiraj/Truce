@@ -3,6 +3,5 @@ __pycache__/
 .venv/
 venv/
 test_llm.py
-test_pipeline.py
 test_client_multi.py
 test.py
