@@ -12,9 +12,9 @@ plain Python. The LLM only generates natural-language messages per round.
 from __future__ import annotations
 
 import json
+import math
 import re
 from datetime import datetime, timezone
-from typing import Any
 
 from pydantic import ValidationError
 
@@ -74,7 +74,6 @@ def run_negotiation(project_id: str, version_id: str) -> NegotiationState:
     ceiling = _resolve_ceiling(version_id)
     round_cap = settings.NEGOTIATION_ROUND_CAP
 
-    # ---- Bug 2 fix: avoid duplicate insert when floor > ceiling ----
     if floor > ceiling:
         if existing is not None:
             return _persist_terminal_state(
@@ -185,8 +184,7 @@ def run_negotiation(project_id: str, version_id: str) -> NegotiationState:
         state = NegotiationState(**updated)
         previous_offer = offer
 
-    # ---- Bug 1 fix: treat reaching the floor at cap as convergence ----
-    if abs(state.current_offer - floor) < OFFER_TOLERANCE:
+    if state.round_count >= round_cap:
         return _finalize_converged(
             project_id=project_id,
             negotiation_id=negotiation_id,
@@ -195,11 +193,12 @@ def run_negotiation(project_id: str, version_id: str) -> NegotiationState:
             offer=state.current_offer,
             round_count=state.round_count,
             message=(
-                f"Agreement reached at ${state.current_offer:.2f}/hr. "
-                "The offer meets the freelancer minimum."
+                f"Agreement reached at ${state.current_offer:.2f}/hr after "
+                f"{state.round_count} rounds — the offer represents a fair midpoint."
             ),
         )
 
+    # This fallback should only be hit if the loop exited abnormally (e.g., status changed).
     return _persist_terminal_state(
         project_id=project_id,
         floor=floor,
@@ -227,12 +226,22 @@ def _resolve_ceiling(version_id: str) -> float:
 
 
 def _next_offer(floor: float, ceiling: float, round_index: int, cap: int) -> float:
-    """Linear compromise: moves from ceiling toward floor each round."""
-    if cap <= 1:
-        return round((floor + ceiling) / 2, 2)
-    t = min(round_index / cap, 1.0)
-    raw = ceiling - t * (ceiling - floor)
-    return round(max(floor, min(ceiling, raw)), 2)
+    """
+    Dynamic Convergence: Concessions slow down exponentially as rounds progress,
+    converging smoothly toward a fair midpoint while respecting limits.
+    """
+    if floor == ceiling or cap <= 1:
+        return round(floor, 2)
+
+    midpoint = (floor + ceiling) / 2.0
+    progress = round_index / cap
+    k = 3.0
+    weight = 1.0 - math.exp(-k * progress)
+    max_weight = 1.0 - math.exp(-k)
+    normalized_weight = weight / max_weight
+
+    raw_offer = ceiling - normalized_weight * (ceiling - midpoint)
+    return round(max(floor, min(ceiling, raw_offer)), 2)
 
 
 def _call_negotiation_message_llm(
@@ -281,50 +290,16 @@ def _call_negotiation_message_llm(
 
 def _parse_negotiation_message(raw: str) -> str:
     text = raw.strip()
-    fence_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
+    fence_match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
     if fence_match:
-        text = fence_match.group(1).strip()
+        text = fence_match.group(1)
+    else:
+        # Try to find a standalone JSON object
+        obj_match = re.search(r"(\{.*\})", text, re.DOTALL)
+        if obj_match:
+            text = obj_match.group(1)
     data = json.loads(text)
-    if not isinstance(data, dict) or "message" not in data:
-        raise MediatorAgentError(f"Malformed negotiation message response: {data}")
-    message = data["message"]
-    if not isinstance(message, str) or not message.strip():
-        raise MediatorAgentError("Negotiation message must be a non-empty string")
-    return message.strip()
-
-
-def _finalize_converged(
-    project_id: str,
-    negotiation_id: str,
-    floor: float,
-    ceiling: float,
-    offer: float,
-    round_count: int,
-    message: str,
-) -> NegotiationState:
-    if round_count == 1 and floor == ceiling:
-        db.save_negotiation_round({
-            "negotiation_id": negotiation_id,
-            "round_number": 1,
-            "actor": "mediator",
-            "offer": offer,
-            "message": message,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
-
-    updated = db.update_negotiation_state(negotiation_id, {
-        "floor": floor,
-        "ceiling": ceiling,
-        "current_offer": offer,
-        "round_count": round_count,
-        "status": "converged",
-    })
-    if updated is None:
-        raise MediatorAgentError("Failed to finalize converged negotiation")
-
-    db.update_project_status(project_id, "pricing_ready")
-    db.update_ai_processing_status(project_id, "done")
-    return NegotiationState(**updated)
+    return data.get("message", "").strip()
 
 
 def _persist_terminal_state(
@@ -336,26 +311,69 @@ def _persist_terminal_state(
     status: str,
     negotiation_id: str | None = None,
 ) -> NegotiationState:
-    payload: dict[str, Any] = {
-        "floor": floor,
-        "ceiling": ceiling,
-        "current_offer": current_offer,
-        "round_count": round_count,
-        "status": status,
-    }
-
+    """Save final state and update project status."""
     if negotiation_id is None:
         state_row = db.save_negotiation_state({
             "project_id": project_id,
-            **payload,
+            "floor": floor,
+            "ceiling": ceiling,
+            "current_offer": current_offer,
+            "round_count": round_count,
+            "status": status,
         })
+        if state_row is None:
+            raise MediatorAgentError("Failed to save terminal negotiation state")
+        state = NegotiationState(**state_row)
+        negotiation_id = str(state.negotiation_id)
     else:
-        state_row = db.update_negotiation_state(negotiation_id, payload)
+        updated = db.update_negotiation_state(negotiation_id, {
+            "current_offer": current_offer,
+            "round_count": round_count,
+            "status": status,
+        })
+        if updated is None:
+            raise MediatorAgentError("Failed to update terminal negotiation state")
+        state = NegotiationState(**updated)
 
-    if state_row is None:
-        raise MediatorAgentError(f"Failed to persist negotiation state ({status})")
-
-    db.update_ai_processing_status(project_id, "done")
+    # Update project status based on outcome
     if status == "converged":
         db.update_project_status(project_id, "pricing_ready")
-    return NegotiationState(**state_row)
+    else:
+        db.update_project_status(project_id, "no_deal_possible")
+
+    return state
+
+
+def _finalize_converged(
+    project_id: str,
+    negotiation_id: str,
+    floor: float,
+    ceiling: float,
+    offer: float,
+    round_count: int,
+    message: str,
+) -> NegotiationState:
+    """Helper to persist a converged state and save a final mediator message."""
+    # Save the final round message if not already saved (e.g., floor==ceiling case)
+    # For the normal flow, the last round is already saved, but we add a final record
+    # to clearly mark convergence.
+    round_row = db.save_negotiation_round({
+        "negotiation_id": negotiation_id,
+        "round_number": round_count + 1,  # one extra to signal settlement
+        "actor": "mediator",
+        "offer": offer,
+        "message": f"Agreement confirmed: {message}",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    })
+    if round_row is None:
+        raise MediatorAgentError("Failed to save convergence round")
+
+    return _persist_terminal_state(
+        project_id=project_id,
+        floor=floor,
+        ceiling=ceiling,
+        current_offer=offer,
+        round_count=round_count,
+        status="converged",
+        negotiation_id=negotiation_id,
+    )
