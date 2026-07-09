@@ -80,6 +80,10 @@ def save_project(project_data: dict) -> dict | None:
     """Creates the project AND its first ProjectVersion (v1) in one call.
     Every downstream table (requirements, price_floors, risks) FKs to
     version_id, not project_id — this must never be skipped."""
+
+    project_data.setdefault("status", "draft")
+    project_data.setdefault("ai_processing_status", "pending")
+
     project = _insert("projects", project_data)
     if project is None:
         raise RuntimeError("save_project: insert into 'projects' failed")
@@ -249,6 +253,32 @@ def get_comparables(price_floor_id: str) -> list[dict]:
         .execute()
     )
     return cast(list[dict[str, Any]], result.data) or []
+
+def get_price_floor_by_version(version_id: str):
+    result = (
+        supabase
+        .table("price_floors")
+        .select("*")
+        .eq("version_id", version_id)
+        .execute()
+    )
+
+    if result.data:
+        return result.data[0]
+
+    return None
+
+def get_comparables_by_price_floor(price_floor_id: str):
+    result = (
+        supabase
+        .table("comparables")
+        .select("*")
+        .eq("price_floor_id", price_floor_id)
+        .order("similarity_rank")
+        .execute()
+    )
+
+    return result.data
 
 def save_human_price_adjustment(data: dict) -> dict | None:
     """Audit trail only — never overwrite price_floors.amount directly."""
