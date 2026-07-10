@@ -47,6 +47,10 @@ def save_profile(data: dict) -> dict | None:
 def get_profile(user_id: str) -> dict | None:
     return _get_by_id("profiles", "user_id", user_id)
 
+def get_profile_by_email(email: str) -> dict | None:
+    result = supabase.table("profiles").select("*").eq("email", email).execute()
+    return result.data[0] if result.data else None    
+
 def save_client_profile(data: dict) -> dict | None:
     return _insert("client_profiles", data)
 
@@ -58,6 +62,18 @@ def save_freelancer_profile(data: dict) -> dict | None:
 
 def get_freelancer_profile(freelancer_profile_id: str) -> dict | None:
     return _get_by_id("freelancer_profiles", "freelancer_profile_id", freelancer_profile_id)
+
+def get_client_profile_by_user(user_id: str) -> dict | None:
+    return _get_by_id("client_profiles", "user_id", user_id)
+
+def get_freelancer_profile_by_user(user_id: str) -> dict | None:
+    return _get_by_id("freelancer_profiles", "user_id", user_id)
+
+def get_projects_by_client(client_profile_id: str) -> list[dict]:
+    return _get_all_by_fk("projects", "client_profile_id", client_profile_id)
+
+def get_projects_by_freelancer(freelancer_profile_id: str) -> list[dict]:
+    return _get_all_by_fk("projects", "freelancer_profile_id", freelancer_profile_id)    
 
 
 # ---------------------------------------------------------------------------
