@@ -1,4 +1,3 @@
-.env
 __pycache__/
 .venv/
 venv/
@@ -6,3 +5,5 @@ test_llm.py
 test_client_multi.py
 test.py
 .pynb_checkpoints
+config.bat
+node_modules

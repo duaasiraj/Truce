@@ -16,22 +16,21 @@ def render() -> None:
     st.markdown(
         """
         <div style="text-align:center; margin-bottom: 1.75rem;">
-            <h1 style="margin-bottom:0.2rem;">🤝 Truce</h1>
+            <h1 class="truce-wordmark" style="margin-bottom:0.2rem;">Truce</h1>
             <p class="truce-secondary" style="margin:0;">Turn a messy brief into a signed contract.</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="truce-card truce-auth-card">', unsafe_allow_html=True)
-    tab_login, tab_signup = st.tabs(["Log In", "Sign Up"])
+    with st.container(key="cardwrap_login"):
+        tab_login, tab_signup = st.tabs(["Log In", "Sign Up"])
 
-    with tab_login:
-        _render_login()
+        with tab_login:
+            _render_login()
 
-    with tab_signup:
-        _render_signup()
-    st.markdown("</div>", unsafe_allow_html=True)
+        with tab_signup:
+            _render_signup()
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -43,17 +42,23 @@ def _inject_login_layout() -> None:
             max-width: 460px;
             margin: 3rem auto 0 auto;
         }
-        .truce-auth-card {
+        .truce-wordmark {
+            font-family: var(--font-display) !important;
+            font-weight: 400 !important;
+            font-size: 3rem !important;
+            letter-spacing: 0.01em;
+        }
+        div[class*="st-key-cardwrap_login"] > div {
             padding: 2rem 2rem 1.5rem 2rem;
         }
-        .truce-auth-card .stTabs [data-baseweb="tab-list"] {
+        div[class*="st-key-cardwrap_login"] .stTabs [data-baseweb="tab-list"] {
             gap: 4px;
         }
-        .truce-auth-card .stTabs [data-baseweb="tab"] {
+        div[class*="st-key-cardwrap_login"] .stTabs [data-baseweb="tab"] {
             border-radius: 10px;
             padding: 6px 4px;
         }
-        .truce-auth-card .stFormSubmitButton > button {
+        div[class*="st-key-cardwrap_login"] .stFormSubmitButton > button {
             width: 100%;
             margin-top: 0.5rem;
         }

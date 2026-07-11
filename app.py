@@ -3,6 +3,7 @@ app.py
 Routing entry point: login gate, then dispatch by role.
 Each real page lives in ui/pages/ -- this file only wires them together.
 """
+import utils.session
 import streamlit as st
 
 from ui.theme import apply_theme, render_theme_toggle
@@ -31,7 +32,10 @@ with st.sidebar:
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:1.2rem;">
             <div style="width:38px; height:38px; border-radius:50%; background:var(--accent-amber);
                         color:#fff; display:flex; align-items:center; justify-content:center;
-                        font-weight:700; font-size:1rem; flex-shrink:0;">
+                        font-weight:700; font-size:1rem; flex-shrink:0;
+                        box-shadow:0 0 0 0 rgba(224,138,43,0.35); transition:box-shadow 0.2s ease, transform 0.2s ease;"
+                 onmouseover="this.style.boxShadow='0 0 0 5px rgba(224,138,43,0.18)'; this.style.transform='scale(1.05)';"
+                 onmouseout="this.style.boxShadow='0 0 0 0 rgba(224,138,43,0.35)'; this.style.transform='scale(1)';">
                 {initial}
             </div>
             <div>
