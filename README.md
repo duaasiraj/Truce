@@ -11,7 +11,7 @@ Built for the **AMD Developer Hackathon: ACT II — Unicorn Track**.
 ## What this MVP actually does
 
 - **Structured extraction** — a Client Agent parses a free-text project brief into deliverables, must-haves, nice-to-haves, and constraints, and flags anything ambiguous for clarification rather than guessing.
-- **Scope document + risk score** — an included/excluded scope statement with a rule-based, deterministic risk score (never an opaque model-guessed number), backed by a visible list of reasons.
+- **Scope document  — an included/excluded scope statement 
 - **Pricing floor** — a Freelancer Agent reasons a fair minimum rate against a set of comparable market rates.
 - **Bounded negotiation** — a Mediator Agent runs a capped, deterministic negotiation between the client's budget ceiling and the freelancer's price floor. Round limits and threshold enforcement live in plain Python, not in model judgment.
 - **Contract generation** — once negotiation converges, a PDF contract (scope, pricing, milestones, signatures) is generated and stored.
@@ -57,7 +57,6 @@ Stage 8 — Human Approval:      Plain-language review; accept or reject with re
 | Client Agent | `agents/client_agent.py` | Extracts and clarifies requirements, sets budget ceiling and priorities |
 | Freelancer Agent | `agents/freelancer_agent.py` | Researches market rate for skill/experience tier, sets price floor with reasoning |
 | Mediator Agent | `agents/mediator_agent.py` | Runs the capped, bounded negotiation between floor and ceiling |
-| Risk scoring | *(supporting logic, not a separate LLM agent)* | Rule-based, deterministic — not model-guessed |
 
 ### Orchestration
 
