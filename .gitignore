@@ -5,3 +5,4 @@ venv/
 test_llm.py
 test_client_multi.py
 test.py
+.pynb_checkpoints
