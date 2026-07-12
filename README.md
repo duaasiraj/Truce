@@ -114,10 +114,10 @@ This demonstrates the architectural path the product is built toward: sensitive 
 **Local GPU-based rate ranking requires CUDA/ROCm hardware.** `tools/rate_ranking.py` loads and runs a local Gemma model (`google/gemma-2-2b-it`) directly on GPU (`device_map="cuda"`) as part of the freelancer pricing flow. This path was built and tested on an AMD GPU pod and will not run on CPU-only free hosting tiers (e.g. Streamlit Community Cloud, Hugging Face Spaces free tier) without modification — see **Deployment** below.
 
 **Proof of AMD usage in AMD pod**:
-[Hackathon Proof Screenshot](./assets/amd_integration.png)
+![Hackathon Proof Screenshot](./assets/amd_integration.png)
 
 Checkout [`amd_integration_Tests.ipynb`](./amd_integration_Tests.ipynb) to see how rate_ranking works:
-[Hackathon Proof Screenshot](./assets/rate.png)
+![Hackathon Proof Screenshot](./assets/rate.png)
 
 **Authentication is custom, not Supabase Auth.** Login uses a simple email/password + bcrypt scheme with session state managed by Streamlit — Supabase is used purely as a Postgres database and file store, not for identity. Row Level Security policies should be configured with this in mind (see `db/client.py`, `auth/session.py`).
 
